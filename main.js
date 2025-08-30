@@ -25,7 +25,6 @@
   thingsIWanted: { label: "Things I wanted to do...", type: "list", placeholder: "Add ..." },
   happy: { label: "What Makes Me Happy", type: "text" },
   sad: { label: "What Makes Me Sad", type: "text" },
-  goal: { label: "Goal for This Year", type: "text" }
 };
 
 
