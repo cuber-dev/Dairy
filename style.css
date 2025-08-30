@@ -145,6 +145,7 @@ button:hover {
     cursor: pointer;
     font-size: 0.85rem;
     box-shadow: none;
+    margin: auto 0;
 }
 
 .small-btn:hover {
