@@ -22,6 +22,7 @@
   cantLive: { label: "One Thing I Can’t Live Without", type: "text" },
   strength: { label: "My Strength", type: "text" },
   weakness: { label: "My Weakness", type: "text" },
+  thingsIWanted: { label: "Things I wanted to do...", type: "list", placeholder: "Add ..." },
   happy: { label: "What Makes Me Happy", type: "text" },
   sad: { label: "What Makes Me Sad", type: "text" },
   goal: { label: "Goal for This Year", type: "text" }
