@@ -1,19 +1,52 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>My Diary</title>
+
+  <!-- styles -->
   <link rel="stylesheet" href="style.css" />
+
+  <!-- jsPDF (global) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  
 </head>
-
 <body>
-  <h1>📔 My Diary</h1>
-  <div class="card"></div>
-  <script type="module" src="main.js"></script>
-</body>
+  <header class="top">
+    <h1>📖 My Diary</h1>
+    <p class="subtitle">Write what happened today — entries are timestamped, saved locally and exportable as a book-like PDF.</p>
+  </header>
 
+  <main class="container">
+    <section class="editor card">
+      <label for="entryText">What's happened today?</label>
+      <textarea id="entryText" placeholder="Write your story..."></textarea>
+
+      <div class="row">
+        <input id="moodInput" placeholder="Optional: mood or short tag (e.g. Happy)" />
+        <button id="addBtn" class="btn primary">Add Entry</button>
+      </div>
+
+      <div class="row small">
+        <button id="exportPdfBtn" class="btn">Export Book PDF</button>
+        <button id="exportJsonBtn" class="btn">Export JSON</button>
+        <button id="importJsonBtn" class="btn">Import JSON</button>
+        <input id="importFile" type="file" accept="application/json" style="display:none" />
+        <div id="lastSaved" class="last-saved">No entries yet.</div>
+      </div>
+    </section>
+
+    <section class="list card">
+      <h2>Entries</h2>
+      <div id="entries"></div>
+      <div id="emptyHint" class="muted">No diary entries yet — add your first memory above.</div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <small>Built with ❤️ — Nandhu</small>
+  </footer>
+
+  <script src="main.js"></script>
+</body>
 </html>

@@ -1,348 +1,275 @@
- const diarySchema = {
-  name: { label: "Name", type: "text" },
-  nickname: { label: "Nickname", type: "text" },
-  age: { label: "Age", type: "number" },
-  birthday: { label: "Birthday", type: "date" },
-  favColor: { label: "Favourite Colour", type: "text" },
-  favFood: { label: "Favourite Foods", type: "list", placeholder: "Add food..." },
-  favDrink: { label: "Favourite Drink", type: "text" },
-  favGame: { label: "Favourite Game", type: "text" },
-  favMovie: { label: "Favourite Movie", type: "text" },
-  favSong: { label: "Favourite Song", type: "text" },
-  favHobby: { label: "Favourite Hobby", type: "text" },
-  favSubject: { label: "Favourite Subject", type: "text" },
-  bestFriends: { label: "Best Friends", type: "list", placeholder: "Add friend..." },
-  mostApp: { label: "Most Used App", type: "text" },
-  mostThing: { label: "Thing I Do the Most", type: "text" },
-  bestMemories: { label: "Best Memories", type: "list", placeholder: "Add memory..." },
-  worstExp: { label: "Worst Experiences", type: "list", placeholder: "Add experience..." },
-  fear: { label: "Biggest Fear", type: "text" },
-  dreamJob: { label: "Dream Job", type: "text" },
-  dreamPlace: { label: "Dream Place to Visit", type: "text" },
-  cantLive: { label: "One Thing I Can’t Live Without", type: "text" },
-  strength: { label: "My Strength", type: "text" },
-  weakness: { label: "My Weakness", type: "text" },
-  thingsIWanted: { label: "Things I wanted to do...", type: "list", placeholder: "Add ..." },
-  happy: { label: "What Makes Me Happy", type: "text" },
-  sad: { label: "What Makes Me Sad", type: "text" },
-};
+// main.js — Diary app logic
+const STORAGE_KEY = "myDiaryEntries_v1";
 
+let entries = []; // { id, text, mood, createdAt }
 
-const STORAGE_KEY = "diaryData";
-let diary = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+function $(s){ return document.querySelector(s); }
+function $all(s){ return Array.from(document.querySelectorAll(s)); }
 
-function initDiaryApp() {
-  const container = document.querySelector(".card");
-  container.innerHTML = ""; // ensure empty
-
-  // Build UI dynamically from schema
-  Object.entries(diarySchema).forEach(([key, field]) => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "field-wrapper";
-
-    const label = document.createElement("label");
-    label.textContent = field.label + (field.type === "list" ? " (List):" : field.type === "checklist" ? " (Checklist):" : ":");
-    wrapper.appendChild(label);
-
-    if (field.type === "list") {
-      const input = document.createElement("input");
-      input.type = "text";
-      input.id = `${key}Input`;
-      input.placeholder = field.placeholder || `Add ${field.label.toLowerCase()}...`;
-      input.className = "list-input";
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.action = "addList";
-      btn.dataset.key = key;
-      btn.textContent = "Add";
-
-      const listDiv = document.createElement("div");
-      listDiv.id = `${key}List`;
-      listDiv.className = "list-container";
-
-      wrapper.appendChild(input);
-      wrapper.appendChild(btn);
-      wrapper.appendChild(listDiv);
-    }
-    else if (field.type === "checklist") {
-      // checklist: input + add button + list with checkbox
-      const input = document.createElement("input");
-      input.type = "text";
-      input.id = `${key}Input`;
-      input.placeholder = field.placeholder || `Add ${field.label.toLowerCase()}...`;
-      input.className = "list-input";
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.dataset.action = "addChecklist";
-      btn.dataset.key = key;
-      btn.textContent = "Add";
-
-      const listDiv = document.createElement("div");
-      listDiv.id = `${key}List`;
-      listDiv.className = "list-container checklist-container";
-
-      wrapper.appendChild(input);
-      wrapper.appendChild(btn);
-      wrapper.appendChild(listDiv);
-    }
-    else {
-      const input = document.createElement("input");
-      input.type = field.type || "text";
-      input.id = key;
-      input.className = "normal-input";
-      wrapper.appendChild(input);
-
-      // auto-save on change/input
-      input.addEventListener("input", () => {
-        diary[key] = input.value.trim();
-        autoSave();
-      });
-    }
-
-    container.appendChild(wrapper);
-  });
-
-  // controls area (import/export)
-  const controls = document.createElement("div");
-  controls.className = "controls";
-
-  // import file input
-  const importInput = document.createElement("input");
-  importInput.type = "file";
-  importInput.accept = "application/json";
-  importInput.id = "importJson";
-  importInput.style.display = "none";
-
-  const importBtn = document.createElement("button");
-  importBtn.type = "button";
-  importBtn.textContent = "Import JSON";
-  importBtn.addEventListener("click", () => importInput.click());
-
-  importInput.addEventListener("change", (e) => {
-    const file = e.target.files && e.target.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      try {
-        const data = JSON.parse(ev.target.result);
-        if (typeof data === "object" && data !== null) {
-          diary = data;
-          saveDiary(); // persist
-          renderDiary(); // update UI
-          alert("Imported diary JSON ✅");
-        } else {
-          alert("Invalid JSON structure");
-        }
-      } catch (err) {
-        alert("Error parsing JSON: " + err.message);
-      }
-    };
-    reader.readAsText(file);
-    importInput.value = ""; // clear
-  });
-
-  // export JSON
-  const exportJsonBtn = document.createElement("button");
-  exportJsonBtn.type = "button";
-  exportJsonBtn.textContent = "Export JSON";
-  exportJsonBtn.addEventListener("click", exportJSON);
-
-  // export PDF
-  const exportPdfBtn = document.createElement("button");
-  exportPdfBtn.type = "button";
-  exportPdfBtn.textContent = "Export PDF";
-  exportPdfBtn.addEventListener("click", exportPDF);
-
-  // last saved display
-  const lastSaved = document.createElement("div");
-  lastSaved.id = "lastSaved";
-  lastSaved.className = "last-saved";
-
-  controls.appendChild(importBtn);
-  controls.appendChild(exportJsonBtn);
-  controls.appendChild(exportPdfBtn);
-  controls.appendChild(importInput);
-  controls.appendChild(lastSaved);
-
-  container.appendChild(controls);
-
-  // initialize list and checklist bindings & render
-  bindListButtons();
-  renderDiary();
-  updateLastSaved();
+function formatDate(ts){
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour:'2-digit', minute:'2-digit' });
 }
 
-function bindListButtons() {
-  // delegate add-list and add-checklist buttons
-  document.querySelectorAll("button[data-action='addList']").forEach(btn => {
-    btn.addEventListener("click", () => {
-      addToList(btn.dataset.key);
-    });
-  });
-  
-}
-
-// ---------- Render helpers ----------
-function renderDiary() {
-  Object.entries(diarySchema).forEach(([key, field]) => {
-    if (field.type === "list") {
-      renderList(key, diary[key] || []);
-    } else if (field.type === "checklist") {
-      renderChecklist(key, diary[key] || []);
-    } else {
-      const el = document.getElementById(key);
-      if (el) el.value = diary[key] || "";
-    }
-  });
-}
-
-// list rendering
-function renderList(key, list = []) {
-  const container = document.getElementById(key + "List");
-  if (!container) return;
-  container.innerHTML = "";
-  list.forEach((item, index) => {
-    const itemEl = document.createElement("div");
-    itemEl.className = "list-item";
-
-    const span = document.createElement("span");
-    span.textContent = item;
-
-    const del = document.createElement("button");
-    del.type = "button";
-    del.className = "small-btn";
-    del.textContent = "x";
-    del.addEventListener("click", () => {
-      removeFromList(key, index);
-    });
-
-    itemEl.appendChild(span);
-    itemEl.appendChild(del);
-    container.appendChild(itemEl);
-  });
-}
-
-// ---------- List operations ----------
-function addToList(key) {
-  const input = document.getElementById(key + "Input");
-  if (!input || !input.value.trim()) return;
-  if (!diary[key]) diary[key] = [];
-  diary[key].push(input.value.trim());
-  input.value = "";
-  renderList(key, diary[key]);
-  autoSave();
-}
-
-function removeFromList(key, index) {
-  if (!diary[key]) return;
-  diary[key].splice(index, 1);
-  renderList(key, diary[key]);
-  autoSave();
-}
-
-// ---------- Persistence ----------
-function saveDiary() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(diary));
-  updateLastSaved();
-}
-
-let saveTimeout = null;
-function autoSave() {
-  // debounce saves so rapid typing doesn't thrash localStorage
-  if (saveTimeout) clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    saveDiary();
-    saveTimeout = null;
-  }, 300); // 300ms debounce
-}
-
-function updateLastSaved() {
-  const el = document.getElementById("lastSaved");
-  if (!el) return;
-  const now = new Date();
-  el.textContent = `Saved: ${now.toLocaleString()}`;
-}
-
-// initial save wrapper (useful after import)
-function persistAndRender() {
-  saveDiary();
-  renderDiary();
-}
-
-// ---------- Import / Export ----------
-function exportJSON() {
-  const dataStr = JSON.stringify(diary, null, 2);
-  const blob = new Blob([dataStr], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `diary-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
-}
-
-// Export PDF — requires jsPDF (add script in HTML)
-// If jsPDF not available, fallback to printing the content (opens print dialog)
-function exportPDF() {
-  // Create a simple text version of diary for PDF
-  const lines = [];
-  Object.entries(diarySchema).forEach(([key, field]) => {
-    lines.push(field.label + ":");
-    const val = diary[key];
-    if (val === undefined || val === null || val === "") {
-      lines.push("  -");
-    } else if (Array.isArray(val)) {
-      if (field.type === "checklist") {
-        val.forEach(it => lines.push(`  - [${it.done ? "x" : " "}] ${it.text}`));
-      } else {
-        val.forEach(it => lines.push("  - " + it));
-      }
-    } else {
-      lines.push("  " + String(val));
-    }
-    lines.push(""); // blank line
-  });
-
-  const text = lines.join("\n");
-
-  if (window.jspdf && window.jspdf.jsPDF) {
-    // newer jspdf builds expose jspdf.jsPDF
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    const maxLineWidth = pageWidth - margin * 2;
-    const linesForDoc = doc.splitTextToSize(text, maxLineWidth);
-    doc.setFontSize(11);
-    doc.text(linesForDoc, margin, 20);
-    doc.save(`diary-${new Date().toISOString().slice(0,10)}.pdf`);
-  } else if (window.jsPDF) {
-    // older global jsPDF
-    const doc = new window.jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const margin = 15;
-    const linesForDoc = doc.splitTextToSize(text, pageWidth - margin * 2);
-    doc.setFontSize(11);
-    doc.text(linesForDoc, margin, 20);
-    doc.save(`diary-${new Date().toISOString().slice(0,10)}.pdf`);
-  } else {
-    // fallback: open printable window with the text
-    const w = window.open("", "_blank");
-    w.document.write(`<pre style="font-family:monospace;white-space:pre-wrap;">${escapeHtml(text)}</pre>`);
-    w.document.close();
-    w.print();
+function loadEntries(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    entries = raw ? JSON.parse(raw) : [];
+    // ensure entries sorted descending (most recent first)
+    entries.sort((a,b)=> b.createdAt - a.createdAt);
+  }catch(e){
+    console.error("Load error", e);
+    entries = [];
   }
 }
 
-function escapeHtml(str) {
-  return String(str).replace(/[&<>"']/g, function (m) {
-    return ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m];
+function saveEntries(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(entries));
+  updateLastSaved();
+}
+
+let saveTimer = null;
+function updateLastSaved(){
+  const el = $("#lastSaved");
+  if(!el) return;
+  if(saveTimer) clearTimeout(saveTimer);
+  el.textContent = "Saved: " + new Date().toLocaleString();
+  // subtle debounce UI change
+  saveTimer = setTimeout(()=> { el.textContent = `Saved: ${new Date().toLocaleString()}`; }, 200);
+}
+
+function renderEntries(){
+  const container = $("#entries");
+  container.innerHTML = "";
+  if(entries.length === 0){
+    $("#emptyHint").style.display = "block";
+    return;
+  } else {
+    $("#emptyHint").style.display = "none";
+  }
+
+  entries.forEach(entry => {
+    const el = document.createElement("div"); el.className = "entry";
+    const meta = document.createElement("div"); meta.className = "meta";
+    const left = document.createElement("div");
+    left.innerHTML = `<strong>${entry.mood ? escapeHtml(entry.mood) + " · " : ""}</strong>${formatDate(entry.createdAt)}`;
+    const right = document.createElement("div");
+    right.innerHTML = `<small>#${entry.id}</small>`;
+    meta.appendChild(left); meta.appendChild(right);
+
+    const text = document.createElement("div"); text.className = "text";
+    text.textContent = entry.text;
+
+    const controls = document.createElement("div"); controls.className = "controls";
+    const editBtn = document.createElement("button"); editBtn.className = "small-btn"; editBtn.textContent = "Edit";
+    const delBtn = document.createElement("button"); delBtn.className = "small-btn del"; delBtn.textContent = "Delete";
+    const copyBtn = document.createElement("button"); copyBtn.className = "small-btn"; copyBtn.textContent = "Copy";
+
+    editBtn.addEventListener("click", ()=> {
+      populateEditorForEdit(entry.id);
+    });
+    delBtn.addEventListener("click", ()=> {
+      if(confirm("Delete this entry?")) {
+        entries = entries.filter(e => e.id !== entry.id);
+        saveEntries();
+        renderEntries();
+      }
+    });
+    copyBtn.addEventListener("click", ()=> {
+      navigator.clipboard?.writeText(entry.text).then(()=> alert("Copied text"));
+    });
+
+    controls.appendChild(editBtn);
+    controls.appendChild(copyBtn);
+    controls.appendChild(delBtn);
+
+    el.appendChild(meta);
+    el.appendChild(text);
+    el.appendChild(controls);
+    container.appendChild(el);
   });
 }
 
-// ---------- Init ----------
-document.addEventListener("DOMContentLoaded", initDiaryApp);
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" })[m]);
+}
+
+function addEntryFromEditor(){
+  const ta = $("#entryText");
+  const mood = $("#moodInput").value.trim();
+  const text = ta.value.trim();
+  if(!text) return alert("Write something before adding.");
+  const id = Date.now().toString(36);
+  const createdAt = Date.now();
+  entries.unshift({ id, text, mood, createdAt });
+  ta.value = "";
+  $("#moodInput").value = "";
+  saveEntries();
+  renderEntries();
+}
+
+function populateEditorForEdit(id){
+  const entry = entries.find(e => e.id === id);
+  if(!entry) return;
+  $("#entryText").value = entry.text;
+  $("#moodInput").value = entry.mood || "";
+  // Remove entry being edited, new save will create updated one (keeps createdAt fresh or preserve original - we preserve original)
+  if(confirm("Save changes will overwrite the selected entry when you press 'Add Entry'. Click OK to prepare edit.")){
+    // mark that next Add should update instead of insert - we'll store editingId
+    editingId = id;
+    $("#addBtn").textContent = "Save Changes";
+    // keep original createdAt: when saving we will replace
+  }
+}
+
+let editingId = null;
+function handleAddOrSave(){
+  const ta = $("#entryText");
+  const mood = $("#moodInput").value.trim();
+  const text = ta.value.trim();
+  if(!text) return alert("Write something before adding.");
+  if(editingId){
+    // update existing
+    const idx = entries.findIndex(e => e.id === editingId);
+    if(idx === -1) { editingId = null; $("#addBtn").textContent = "Add Entry"; return; }
+    entries[idx].text = text;
+    entries[idx].mood = mood;
+    // keep createdAt unchanged so history remains
+    // move updated entry to top (optional)
+    const updated = entries.splice(idx,1)[0];
+    entries.unshift(updated);
+    editingId = null;
+    $("#addBtn").textContent = "Add Entry";
+  } else {
+    addEntryFromEditor();
+    return;
+  }
+  // finalize after editing
+  $("#entryText").value = "";
+  $("#moodInput").value = "";
+  saveEntries();
+  renderEntries();
+}
+
+function exportJSON(){
+  const blob = new Blob([JSON.stringify(entries, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `diary-entries-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function importJSONFile(file){
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!Array.isArray(data)) return alert("Invalid JSON: expected array of entries");
+      // Basic validation and normalize fields
+      data.forEach(item => {
+        if(!item.id) item.id = (Date.now() + Math.random()).toString(36);
+        if(!item.createdAt) item.createdAt = Date.now();
+        if(!item.text) item.text = "";
+      });
+      // merge (append) — avoid duplicates by id
+      const ids = new Set(entries.map(e=>e.id));
+      data.forEach(d => { if(!ids.has(d.id)) entries.push(d); });
+      entries.sort((a,b)=> b.createdAt - a.createdAt);
+      saveEntries();
+      renderEntries();
+      alert("Imported entries.");
+    } catch(err){
+      alert("Import error: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function exportBookPDF(){
+  if(entries.length === 0) return alert("No entries to export.");
+  // Use jsPDF (support both window.jspdf.jsPDF and window.jsPDF)
+  const jsPDFCtor = (window.jspdf && window.jspdf.jsPDF) ? window.jspdf.jsPDF : (window.jsPDF ? window.jsPDF : null);
+  if(!jsPDFCtor) return alert("jsPDF not available.");
+
+  const doc = new jsPDFCtor({ unit: "pt", format: "a4" });
+  const pageWidth = doc.internal.pageSize.getWidth();
+  const pageHeight = doc.internal.pageSize.getHeight();
+  const margin = 40;
+  const usableWidth = pageWidth - margin*2;
+  const lineHeight = 14;
+  const fontSizeHeading = 16;
+  const fontSizeBody = 11;
+
+  // sort entries ascending for a 'book' chronological order (oldest first)
+  const toExport = [...entries].sort((a,b)=> a.createdAt - b.createdAt);
+
+  toExport.forEach((entry, idx) => {
+    if(idx > 0) doc.addPage();
+    // header: date + mood centered
+    doc.setFontSize(18);
+    doc.setFont(undefined, "bold");
+    const header = (entry.mood ? `${entry.mood} — ` : "") + formatDate(entry.createdAt);
+    // center header
+    const headerWidth = doc.getTextWidth(header);
+    doc.text(header, (pageWidth - headerWidth)/2, 60);
+
+    // draw a thin divider
+    doc.setLineWidth(0.5);
+    doc.line(margin, 70, pageWidth - margin, 70);
+
+    // body: wrap text
+    doc.setFontSize(fontSizeBody);
+    doc.setFont(undefined, "normal");
+    const body = entry.text.replace(/\t/g, '    ');
+    const lines = doc.splitTextToSize(body, usableWidth);
+    // paginate within entry if needed
+    let y = 90;
+    const bottomLimit = pageHeight - margin;
+    for(let i=0;i<lines.length;i++){
+      if(y + lineHeight > bottomLimit){
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(lines[i], margin, y);
+      y += lineHeight;
+    }
+
+    // small footer on each entry page with page number
+    const pageNum = doc.getCurrentPageInfo ? doc.getCurrentPageInfo().pageNumber : (doc.internal.getNumberOfPages ? doc.internal.getNumberOfPages() : null);
+    const pageStr = `— Page ${pageNum} —`;
+    doc.setFontSize(9);
+    const footerW = doc.getTextWidth(pageStr);
+    doc.text(pageStr, (pageWidth - footerW)/2, pageHeight - 18);
+  });
+
+  const fname = `diary-book-${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(fname);
+}
+
+function wireUp(){
+  $("#addBtn").addEventListener("click", handleAddOrSave);
+  $("#exportJsonBtn").addEventListener("click", exportJSON);
+  $("#exportPdfBtn").addEventListener("click", exportBookPDF);
+  $("#importJsonBtn").addEventListener("click", ()=> $("#importFile").click());
+  $("#importFile").addEventListener("change", (e)=> {
+    const file = e.target.files && e.target.files[0];
+    if(file) importJSONFile(file);
+    e.target.value = "";
+  });
+
+  // Enter+Ctrl to quick-add
+  $("#entryText").addEventListener("keydown", (ev)=> {
+    if(ev.ctrlKey && ev.key === "Enter"){
+      handleAddOrSave();
+    }
+  });
+}
+
+document.addEventListener("DOMContentLoaded", ()=> {
+  loadEntries();
+  renderEntries();
+  wireUp();
+  updateLastSaved();
+});
