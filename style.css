@@ -1,11 +1,11 @@
-:root{
-  --bg: linear-gradient(135deg,#f6d365 0%, #fda085 100%);
-  --card:#fff;
-  --text:#222;
-  --muted:#666;
-  --primary:#6a11cb;
-  --radius:12px;
-  --shadow: 0 6px 18px rgba(0,0,0,0.12);
+:root {
+  --bg: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+  --card: #fff8e7;
+  --text: #4b3832;
+  --muted: #7d5a50;
+  --primary: #d2601a;
+  --radius: 12px;
+  --shadow: 0 6px 18px rgba(139, 69, 19, 0.3);
 }
 
 *{box-sizing:border-box}
